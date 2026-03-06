@@ -1,0 +1,19 @@
+body { font-family: Arial, sans-serif; background:#f6f7fb; margin:0; }
+.container { max-width: 980px; margin: 40px auto; padding: 24px; background:#fff; border-radius: 12px; }
+.ok { padding: 10px 12px; background:#eefaf1; border: 1px solid #bfe7c7; border-radius: 10px; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+@media (max-width: 900px){ .grid { grid-template-columns: 1fr; } }
+.card { border: 1px solid #e7e8ee; border-radius: 12px; padding: 16px; background: #fff; }
+label { display:block; margin-top: 10px; font-weight: 600; }
+input, textarea { width: 100%; padding: 10px; margin-top: 6px; border: 1px solid #cfd3df; border-radius: 10px; box-sizing: border-box; }
+button { margin-top: 12px; padding: 10px 12px; border: none; border-radius: 10px; background: #0b5cff; color: #fff; cursor: pointer; }
+button:hover { opacity: 0.92; }
+.hint { color:#555; font-size: 13px; margin: 8px 0 0; }
+.row { display:flex; align-items:center; justify-content: space-between; gap: 12px; }
+ul { padding-left: 18px; }
+.event { padding: 10px 0; border-bottom: 1px dashed #ddd; }
+.eventTitle { font-weight: 800; }
+.eventMeta { color:#555; font-size: 13px; display:flex; gap: 12px; margin-top: 4px; }
+.eventDesc { margin-top: 6px; color:#333; }
+.status { margin-top: 12px; color:#1a7f37; }
+.status.error { color:#b42318; }
