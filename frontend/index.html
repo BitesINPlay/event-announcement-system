@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Event Announcement Website</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <div class="container">
+    <h1>Event Announcement Website</h1>
+    <p class="ok">S3 Static Website Hosting is working ✅</p>
+
+    <div class="grid">
+      <section class="card">
+        <h2>Email Subscription</h2>
+
+        <form id="subscribeForm">
+          <label>Email address</label>
+          <input type="email" id="subEmail" placeholder="you@example.com" required />
+          <button type="submit">Subscribe</button>
+          <p class="hint">You will receive an email to confirm your subscription.</p>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>Create New Event</h2>
+
+        <form id="eventForm">
+          <label>Title *</label>
+          <input type="text" id="title" placeholder="Demo Event" required />
+
+          <label>Date *</label>
+          <input type="date" id="date" required />
+
+          <label>Location</label>
+          <input type="text" id="location" placeholder="Sofia" />
+
+          <label>Description</label>
+          <textarea id="description" rows="4" placeholder="Event details"></textarea>
+
+          <button type="submit">Create Event</button>
+          <p class="hint">This will update events.json and send email notifications.</p>
+        </form>
+      </section>
+    </div>
+
+    <section class="card">
+      <div class="row">
+        <h2>Upcoming Events</h2>
+        <button id="refreshBtn" type="button">Refresh</button>
+      </div>
+
+      <ul id="eventsList"></ul>
+      <p id="status" class="status"></p>
+    </section>
+  </div>
+
+  <script>
+    // Your API Gateway Invoke URL (no trailing slash)
+    const API_BASE = "YOUR_API_GATEWAY_INVOKE_URL_HERE";
+
+    const statusEl = document.getElementById("status");
+    const listEl = document.getElementById("eventsList");
+
+    function setStatus(msg, isError = false) {
+      statusEl.textContent = msg;
+      statusEl.className = "status" + (isError ? " error" : "");
+    }
+
+    function escapeHtml(s) {
+      return (s ?? "").toString()
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    async function loadEvents() {
+      setStatus("Loading events...");
+      listEl.innerHTML = "";
+
+      try {
+        const r = await fetch("./events.json", { cache: "no-store" });
+
+        if (!r.ok) {
+          setStatus(`Failed to load events.json (HTTP ${r.status})`, true);
+          return;
+        }
+
+        const data = await r.json();
+        const events = Array.isArray(data.events) ? data.events : [];
+
+        if (events.length === 0) {
+          listEl.innerHTML = "<li>No events available.</li>";
+          setStatus("OK");
+          return;
+        }
+
+        // Newest first (if createdAt exists)
+        events.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+
+        for (const ev of events) {
+          const li = document.createElement("li");
+          li.innerHTML = `
+            <div class="event">
+              <div class="eventTitle">${escapeHtml(ev.title)}</div>
+              <div class="eventMeta">
+                <span>${escapeHtml(ev.date || "")}</span>
+                <span>${escapeHtml(ev.location || "")}</span>
+              </div>
+              ${ev.description ? `<div class="eventDesc">${escapeHtml(ev.description)}</div>` : ""}
+            </div>
+          `;
+          listEl.appendChild(li);
+        }
+
+        setStatus("OK");
+      } catch (e) {
+        console.error(e);
+        setStatus("JavaScript error: " + e.message, true);
+      }
+    }
+
+    async function postJson(url, payload) {
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const text = await r.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
+
+      if (!r.ok) {
+        const msg = (data && (data.error || data.message)) ? (data.error || data.message) : `HTTP ${r.status}`;
+        throw new Error(msg);
+      }
+      return data;
+    }
+
+    document.getElementById("subscribeForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      setStatus("Sending subscription request...");
+
+      const email = document.getElementById("subEmail").value.trim();
+
+      try {
+        const out = await postJson(`${API_BASE}/subscribe`, { email });
+        setStatus(out.message || "Confirmation email sent. Check your inbox.");
+      } catch (err) {
+        setStatus("Subscription error: " + err.message, true);
+      }
+    });
+
+    document.getElementById("eventForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      setStatus("Creating event...");
+
+      const payload = {
+        title: document.getElementById("title").value.trim(),
+        date: document.getElementById("date").value,
+        location: document.getElementById("location").value.trim(),
+        description: document.getElementById("description").value.trim()
+      };
+
+      try {
+        const out = await postJson(`${API_BASE}/new-event`, payload);
+        setStatus(out.message || "Event created successfully.");
+
+        // Give S3 a moment, then reload
+        setTimeout(loadEvents, 600);
+        e.target.reset();
+      } catch (err) {
+        setStatus("Event creation error: " + err.message, true);
+      }
+    });
+
+    document.getElementById("refreshBtn").addEventListener("click", loadEvents);
+
+    loadEvents();
+  </script>
+</body>
+</html>
